@@ -13,7 +13,7 @@ async def fetch_detail(session, func_parse_html, link, idx, total, semaphore):
             now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             try:
                 await asyncio.sleep(random.uniform(0.3, 1))
-                async with session.get(link, headers=HEADERS, proxy=None, timeout=20) as resp:
+                async with session.get(link, headers=HEADERS, proxy=PROXY, timeout=20) as resp:
                     if resp.status != 200:
                         print(f"{now} ❌ [{idx}/{total}] HTTP {resp.status} at {link}")
                         continue

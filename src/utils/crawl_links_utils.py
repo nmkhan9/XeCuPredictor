@@ -14,7 +14,7 @@ async def crawl_links(session, func_get_links, i, url_template=""):
         start_time = time.perf_counter()
         try:
             await asyncio.sleep(random.uniform(0.5, 1.5))
-            async with session.get(url, headers=HEADERS, timeout=15) as resp:
+            async with session.get(url, headers=HEADERS, proxy= PROXY, timeout=15) as resp:
                 crawl_time = datetime.now().strftime("%H:%M:%S")
                 if resp.status != 200:
                     print(f"❌ HTTP {resp.status} at page {i} | {crawl_time}")

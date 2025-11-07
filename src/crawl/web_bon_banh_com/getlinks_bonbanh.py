@@ -3,7 +3,7 @@ import os
 from src.utils.crawl_links_utils import crawl_more_links
 from pathlib import Path
 
-PAGE = 5
+PAGE = 150
 url_template = "https://bonbanh.com/oto/page,{}"
 
 BASE_DIR = Path(__file__).resolve().parents[3]

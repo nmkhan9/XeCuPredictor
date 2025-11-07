@@ -35,6 +35,8 @@ def parse_car_detail(html):
             value_tag = key_tag.find_next("span", class_="bwq0cbs")
             value = value_tag.get_text(strip=True) if value_tag else None
             specs[key] = value
+    
+    return specs
 
 if __name__ == "__main__":
     asyncio.run(crawl_details(path_file, parse_car_detail, table_id))
