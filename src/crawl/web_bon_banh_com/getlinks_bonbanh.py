@@ -1,7 +1,7 @@
 import asyncio
 import aiohttp
 import os
-from src.utils.crawl_utils import crawl_links
+from utils.crawl_links_utils import crawl_links
 from pathlib import Path
 
 PAGE = 150

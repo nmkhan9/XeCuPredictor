@@ -1,10 +1,11 @@
 import asyncio
 import aiohttp
 import os
-from src.utils.crawl_utils import crawl_links
+from src.utils.crawl_links_utils import crawl_more_links
 from pathlib import Path
 
-PAGE = 150
+PAGE = 5
+url_template = "https://oto.com.vn/mua-ban-xe/p{}"
 
 BASE_DIR = Path(__file__).resolve().parents[3]
 path_store = BASE_DIR / "data" / "links_oto.txt"
@@ -20,36 +21,6 @@ def getlink(soup):
             links.append(link)
     return links
 
-async def main():
-    link_set = set()
-    url_template = "https://oto.com.vn/mua-ban-xe/p{}"
-
-    async with aiohttp.ClientSession() as session:
-        tasks = []
-        for i in range(1, PAGE + 1):
-            task = crawl_links(
-                session=session,
-                func_get_links=getlink,
-                i=i,
-                link_set=link_set,
-                url_template=url_template,
-            )
-            tasks.append(task)
-
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-    with open(path_store, "a", encoding="utf-8") as f: 
-        for r in results:
-            if isinstance(r, tuple):
-                links, _, _ = r
-                for link in sorted(set(links)):  
-                    if link not in link_set:    
-                        f.write(link + "\n")
-                        f.flush()
-                        link_set.add(link)
-
-    print(f"\n📦 Tổng số link thu được: {len(link_set)}")
-    print(f"📁 Đã lưu tại: {path_store}")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(crawl_more_links(url_template, PAGE, getlink, path_store))
