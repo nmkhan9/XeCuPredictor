@@ -1,7 +1,7 @@
 import asyncio
 import aiohttp
 import os
-from src.utils.crawl_link import crawl_page
+from src.utils.crawl_utils import crawl_links
 from configs import HEADERS, PROXY
 from pathlib import Path
 
@@ -27,7 +27,7 @@ async def main():
     async with aiohttp.ClientSession() as session:
         tasks = []
         for i in range(1, 5):
-            task = crawl_page(
+            task = crawl_links(
                 session=session,
                 func_get_links=getlink,
                 i=i,
@@ -40,14 +40,15 @@ async def main():
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-    for r in results:
-        if isinstance(r, tuple):
-            links, _, _ = r
-            link_set.update(links)
-
-    with open(path_store, "w", encoding="utf-8") as f:
-        for link in sorted(link_set):
-            f.write(link + "\n")
+    with open(path_store, "a", encoding="utf-8") as f: 
+        for r in results:
+            if isinstance(r, tuple):
+                links, _, _ = r
+                for link in sorted(set(links)):  
+                    if link not in link_set:    
+                        f.write(link + "\n")
+                        f.flush()
+                        link_set.add(link)
 
     print(f"\n📦 Tổng số link thu được: {len(link_set)}")
     print(f"📁 Đã lưu tại: {path_store}")
