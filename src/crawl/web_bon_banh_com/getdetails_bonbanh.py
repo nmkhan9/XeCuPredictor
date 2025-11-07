@@ -1,11 +1,8 @@
 import asyncio
 from bs4 import BeautifulSoup
 from pathlib import Path
-from src.utils.crawl_details_utils import crawl_details
 from configs import GCS_BUCKET_NAME,GCS_PROJECT_ID
-
-BATCH_SIZE = 100      
-MIN_DELAY, MAX_DELAY = 5, 10
+from src.utils.crawl_details_utils import crawl_details
 
 BASE_DIR = Path(__file__).resolve().parents[3]
 path_file = BASE_DIR / "data" / "links_bonbanh.txt"

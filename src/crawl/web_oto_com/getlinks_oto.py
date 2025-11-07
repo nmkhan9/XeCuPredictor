@@ -1,5 +1,4 @@
 import asyncio
-import aiohttp
 import os
 from src.utils.crawl_links_utils import crawl_more_links
 from pathlib import Path

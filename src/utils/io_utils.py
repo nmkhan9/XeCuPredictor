@@ -1,6 +1,4 @@
-import pandas as pd
 from google.cloud import bigquery
-from configs import GOOGLE_APPLICATION_CREDENTIALS
 import re
 
 
