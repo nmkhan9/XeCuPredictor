@@ -12,33 +12,27 @@ BATCH_SIZE = 100
 MIN_DELAY, MAX_DELAY = 5, 10
 
 BASE_DIR = Path(__file__).resolve().parents[3]
-path_file = BASE_DIR / "data" / "links_oto.txt"
-table_id = f"{GCS_PROJECT_ID}.{GCS_BUCKET_NAME}.oto_com"
+path_file = BASE_DIR / "data" / "links_bonbanh.txt"
+table_id = f"{GCS_PROJECT_ID}.{GCS_BUCKET_NAME}.bonbanh_com"
 
 def parse_car_detail(html):
     soup = BeautifulSoup(html, "html.parser")
-    car_info = {}
+    specs = {}
+    name_tag = soup.find("div", class_="title")
+    name = name_tag.find_next("h1").get_text(strip=True) if name_tag else None
+    specs["Name"] = name
 
-    name_tag = soup.find("div", class_="group-title-detail")
-    name = name_tag.find_next("h1", class_="title-detail").get_text(strip=True) if name_tag else None
-    car_info["Name"] = name
-
-    price_tag = soup.find("span", class_="price")
-    price = price_tag.get_text(strip=True) if price_tag else None
-    car_info["Price"] = price
-
-    labels = soup.find_all("label", class_="label")
-    for label in labels:
-        key = label.get_text(strip=True)
-        value_node = label.find_next_sibling(string=True)
-        if not value_node or value_node.strip() == "":
-            div = label.find_next("div")
-            value = div.get_text(strip=True) if div else "N/A"
-        else:
-            value = value_node.strip()
-        car_info[key] = value
-
-    return car_info
+    spec_section = soup.find("div", class_="box_car_detail")
+    if spec_section:
+        rows = spec_section.find_all("div", class_="row")
+        for row in rows:
+            label_div = row.find("div", class_="label")
+            value_div = row.find("div", class_="txt_input")
+            if label_div and value_div:
+                label = label_div.get_text(strip=True).replace(":", "")
+                value = value_div.get_text(strip=True)
+                specs[label] = value
+    return specs
 
 async def crawl_details(path_file):
     link_set = read_links_from_file(path_file)

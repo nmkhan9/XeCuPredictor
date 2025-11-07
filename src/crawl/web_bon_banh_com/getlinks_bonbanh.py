@@ -7,22 +7,22 @@ from pathlib import Path
 PAGE = 150
 
 BASE_DIR = Path(__file__).resolve().parents[3]
-path_store = BASE_DIR / "data" / "links_oto.txt"
+path_store = BASE_DIR / "data" / "links_bonbanh.txt"
 os.makedirs(os.path.dirname(path_store), exist_ok=True)
 
 def getlink(soup):
-    items = soup.find_all("h3", class_="title")
+    items = soup.find_all("li", class_=["car-item row1", "car-item row2"])
     links = []
     for item in items:
-        a_tag = item.find("a")
+        a_tag = item.find("a", itemprop="url")
         if a_tag and a_tag.get("href"):
-            link = "https://oto.com.vn" + a_tag["href"]
+            link = "https://bonbanh.com/" + a_tag.get("href")
             links.append(link)
     return links
 
 async def main():
     link_set = set()
-    url_template = "https://oto.com.vn/mua-ban-xe/p{}"
+    url_template = "https://bonbanh.com/oto/page,{}"
 
     async with aiohttp.ClientSession() as session:
         tasks = []
