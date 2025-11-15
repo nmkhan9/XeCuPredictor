@@ -45,16 +45,20 @@ def remove_outliers_iqr(df, column):
     return df_filtered
 
 def clean_km(df, col_name):
-    df[col_name] = (
-        df[col_name]
-        .astype(str)
-        .str.replace("Km", "", case=False, regex=False)
-        .str.replace(" ", "")
-        .str.replace(",", "")
-        .replace(["None", "nan", "NaN", ""], None)
-        .astype(float)
-    )
+    def convert_km(x):
+        if pd.isna(x):
+            return None
+        x = str(x).replace("Km", "").replace("km", "").replace(" ", "").replace(",", "").replace(".", "")
+        if x.lower() in ["none", "nan", ""]:
+            return None
+        try:
+            return float(x)
+        except:
+            return None
+
+    df[col_name] = df[col_name].apply(convert_km)
     return df
+
 
 
 def clean_fuel(x):
