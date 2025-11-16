@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dự đoán giá xe</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        .form-group select, .form-group input { transition: all 0.3s ease; }
+        .form-group select:focus, .form-group input:focus {
+            outline: none;
+            border-color: #10B981;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+        }
+        .icon-label { display: flex; align-items: center; gap: 8px; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-2xl">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">
+            <i class="fas fa-car mr-2"></i> Dự đoán giá xe
+        </h1>
+        <form id="predict-form" class="space-y-4">
+
+            <div class="form-group">
+                <label for="origin" class="icon-label text-sm font-medium text-gray-700">
+                    <i class="fas fa-globe"></i> Xuất xứ
+                </label>
+                <select name="origin" id="origin" required class="mt-1 block w-full border rounded-md p-2 focus:ring-2 focus:ring-emerald-500">
+                    <option value="" disabled selected>Chọn xuất xứ</option>
+                    {% for val in unique_values.origin %}
+                        <option value="{{ val }}">{{ val }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="fuel" class="icon-label text-sm font-medium text-gray-700">
+                    <i class="fas fa-gas-pump"></i> Loại nhiên liệu
+                </label>
+                <select name="fuel" id="fuel" required class="mt-1 block w-full border rounded-md p-2 focus:ring-2 focus:ring-emerald-500">
+                    <option value="" disabled selected>Chọn loại nhiên liệu</option>
+                    {% for val in unique_values.fuel %}
+                        <option value="{{ val }}">{{ val }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="body" class="icon-label text-sm font-medium text-gray-700">
+                    <i class="fas fa-car-side"></i> Kiểu thân xe
+                </label>
+                <select name="body" id="body" required class="mt-1 block w-full border rounded-md p-2 focus:ring-2 focus:ring-emerald-500">
+                    <option value="" disabled selected>Chọn kiểu thân xe</option>
+                    {% for val in unique_values.body %}
+                        <option value="{{ val }}">{{ val }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="brand" class="icon-label text-sm font-medium text-gray-700">
+                    <i class="fas fa-copyright"></i> Hãng xe
+                </label>
+                <select name="brand" id="brand" required class="mt-1 block w-full border rounded-md p-2 focus:ring-2 focus:ring-emerald-500">
+                    <option value="" disabled selected>Chọn hãng xe</option>
+                    {% for val in unique_values.brand %}
+                        <option value="{{ val }}">{{ val }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="age" class="icon-label text-sm font-medium text-gray-700">
+                    <i class="fas fa-calendar-alt"></i> Tuổi xe (năm)
+                </label>
+                <input type="number" name="age" id="age" step="0.1" min="0" required class="mt-1 block w-full border rounded-md p-2 focus:ring-2 focus:ring-emerald-500" placeholder="Ví dụ: 2.5">
+            </div>
+
+            <div class="form-group">
+                <label for="km" class="icon-label text-sm font-medium text-gray-700">
+                    <i class="fas fa-tachometer-alt"></i> Số km đã đi
+                </label>
+                <input type="number" name="km" id="km" min="0" required class="mt-1 block w-full border rounded-md p-2 focus:ring-2 focus:ring-emerald-500" placeholder="Ví dụ: 45000">
+            </div>
+
+            <button type="submit" class="w-full bg-emerald-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-emerald-600 transition duration-300">
+                <i class="fas fa-calculator mr-2"></i> Dự đoán giá
+            </button>
+        </form>
+        <div id="result" class="mt-6 text-lg font-semibold text-gray-800 text-center"></div>
+    </div>
+
+    <script>
+        document.getElementById('predict-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Đang dự đoán...';
+            const formData = new FormData(e.target);
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                if (result.prediction !== undefined) {
+                    resultDiv.innerHTML = `Giá dự đoán: ${Number(result.prediction).toLocaleString('vi-VN')} VND`;
+                    resultDiv.className = 'mt-6 text-lg font-semibold text-center text-green-600';
+                } else {
+                    resultDiv.innerHTML = `Lỗi: ${result.error}`;
+                    resultDiv.className = 'mt-6 text-lg font-semibold text-center text-red-500';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `Lỗi kết nối: ${error.message}`;
+                resultDiv.className = 'mt-6 text-lg font-semibold text-center text-red-500';
+            }
+        });
+    </script>
+</body>
+</html>

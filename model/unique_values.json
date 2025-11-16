@@ -1,0 +1,58 @@
+{
+  "origin": [
+    "Trong nước",
+    "Nhập khẩu"
+  ],
+  "fuel": [
+    "Xăng",
+    "Khác",
+    "Dầu",
+    "Điện",
+    "Hybrid"
+  ],
+  "body": [
+    "SUV",
+    "Sedan",
+    "MPV",
+    "Hatchback",
+    "Pickup",
+    "Other",
+    "Truck",
+    "Convertible",
+    "Sports Car",
+    "Coupe",
+    "Wagon"
+  ],
+  "brand": [
+    "Toyota",
+    "Ford",
+    "Kia",
+    "Hyundai",
+    "Mercedes",
+    "VinFast",
+    "Mazda",
+    "Mitsubishi",
+    "Honda",
+    "Peugeot",
+    "Suzuki",
+    "BMW",
+    "MG",
+    "Nissan",
+    "Chevrolet",
+    "Audi",
+    "Lexus",
+    "Porsche",
+    "Volvo",
+    "Other",
+    "Subaru",
+    "Land Rover",
+    "Volkswagen",
+    "Isuzu",
+    "BYD",
+    "Daewoo",
+    "Mini",
+    "Lynk & Co",
+    "Rolls-Royce",
+    "Jaguar"
+  ]
+}
