@@ -1,5 +1,6 @@
 from flask import Flask, request, render_template, jsonify
 import pandas as pd
+import numpy as np
 import os
 import json
 from joblib import load
@@ -8,7 +9,7 @@ app = Flask(__name__)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-gbm_model = load(os.path.join(BASE_DIR, "model", "gradient_boosting_model.joblib"))
+gbm_model = load(os.path.join(BASE_DIR, "model", "gradient_boosting_best.joblib"))
 ohe = load(os.path.join(BASE_DIR, "model", "onehot_encoder.pkl"))
 scaler = load(os.path.join(BASE_DIR, "model", "scaler.pkl"))
 
@@ -23,19 +24,17 @@ def feature_engineering(df, km_col="km", age_col="age"):
     
     df["km_group"] = pd.cut(
         df[km_col],
-        bins=[0, 50000, 100000, 150000, 300000, 1_000_000],
+        bins=[0, 50000, 100000, 150000, 300000, 1e8],
         labels=["very_low", "low", "medium", "high", "very_high"]
     )
     
     def age_risk(age):
         if age <= 3: return "new"
         elif age <= 7: return "mid"
-        elif age <= 12: return "old"
+        elif age <= 15: return "old"
         else: return "very_old"
     
     df["age_risk"] = df[age_col].apply(age_risk)
-    df["old_car"] = (df[age_col] > 10).astype(int)
-    df["high_km"] = (df[km_col] > 100000).astype(int)
     
     return df
 
@@ -76,7 +75,8 @@ def predict():
         )
         
         processed_data = pd.concat([scaled_numerical_df, encoded_categorical_df], axis=1)
-        prediction = gbm_model.predict(processed_data)[0]
+        gbm_pred = gbm_model.predict(processed_data)[0]
+        prediction = np.expm1(gbm_pred)
         
         return jsonify({'prediction': round(prediction, 2)})
     
