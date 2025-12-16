@@ -92,31 +92,34 @@
         <div id="result" class="mt-6 text-lg font-semibold text-gray-800 text-center"></div>
     </div>
 
-    <script>
-        document.getElementById('predict-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const resultDiv = document.getElementById('result');
-            resultDiv.innerHTML = 'Đang dự đoán...';
-            const formData = new FormData(e.target);
+ <script>
+    document.getElementById('predict-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const resultDiv = document.getElementById('result');
+        resultDiv.innerHTML = 'Đang dự đoán...';
+        resultDiv.className = 'mt-6 text-lg font-semibold text-center text-gray-800';
 
-            try {
-                const response = await fetch('/predict', {
-                    method: 'POST',
-                    body: formData
-                });
-                const result = await response.json();
-                if (result.prediction !== undefined) {
-                    resultDiv.innerHTML = `Giá dự đoán: ${Number(result.prediction).toLocaleString('vi-VN')} VND`;
-                    resultDiv.className = 'mt-6 text-lg font-semibold text-center text-green-600';
-                } else {
-                    resultDiv.innerHTML = `Lỗi: ${result.error}`;
-                    resultDiv.className = 'mt-6 text-lg font-semibold text-center text-red-500';
-                }
-            } catch (error) {
-                resultDiv.innerHTML = `Lỗi kết nối: ${error.message}`;
+        const formData = new FormData(e.target);
+
+        try {
+            const response = await fetch('/predict', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+
+            if (result.lower_bound !== undefined && result.upper_bound !== undefined) {
+                resultDiv.innerHTML = `
+                    <p>Khoảng dự đoán giá xe: <span class="text-blue-600">${Number(result.lower_bound).toLocaleString('vi-VN')} VND</span> - <span class="text-blue-600">${Number(result.upper_bound).toLocaleString('vi-VN')} VND</span></p>
+                `;
+                resultDiv.className = 'mt-6 text-lg font-semibold text-center text-blue-600';
+            } else {
+                resultDiv.innerHTML = `Lỗi: ${result.error}`;
                 resultDiv.className = 'mt-6 text-lg font-semibold text-center text-red-500';
             }
-        });
-    </script>
-</body>
-</html>
+        } catch (error) {
+            resultDiv.innerHTML = `Lỗi kết nối: ${error.message}`;
+            resultDiv.className = 'mt-6 text-lg font-semibold text-center text-red-500';
+        }
+    });
+</script>

@@ -22,20 +22,24 @@ numerical_cols = list(scaler.feature_names_in_)
 def feature_engineering(df, km_col="km", age_col="age"):
     df = df.copy()
     
-    df["km_group"] = pd.cut(
-        df[km_col],
-        bins=[0, 50000, 100000, 150000, 300000, 1e8],
-        labels=["very_low", "low", "medium", "high", "very_high"]
-    )
+    df["age_group"] = pd.cut(
+    df["age"],
+    bins=[-1, 5, 10, 15, 100],
+    labels=["New", "Young", "Mid", "Old"])
     
-    def age_risk(age):
-        if age <= 3: return "new"
-        elif age <= 7: return "mid"
-        elif age <= 15: return "old"
-        else: return "very_old"
-    
-    df["age_risk"] = df[age_col].apply(age_risk)
-    
+    df["km_per_year"] = df["km"] / (df["age"] + 1)
+
+    df["log_age"] = np.log1p(df["age"])
+
+    top_body = df["body"].value_counts().nlargest(5).index
+    df["body_group"] = df["body"].where(df["body"].isin(top_body), "Other")
+ 
+    top_brand = df["brand"].value_counts().nlargest(10).index
+    df["brand_group"] = df["brand"].where(df["brand"].isin(top_brand), "Other")
+
+    df["is_imported"] = (df["origin"] == "Nhập Khẩu").astype(object)
+
+    df["imported_age"] = df["is_imported"].astype(str) + "_" + df["age_group"].astype(str)
     return df
 
 @app.route('/')
@@ -60,13 +64,14 @@ def predict():
 
         input_df = input_df[numerical_cols + categorical_cols]
         
+
         encoded_categorical = ohe.transform(input_df[categorical_cols])
         encoded_categorical_df = pd.DataFrame(
             encoded_categorical,
             columns=ohe.get_feature_names_out(categorical_cols),
             index=input_df.index
         )
-        
+
         scaled_numerical = scaler.transform(input_df[numerical_cols])
         scaled_numerical_df = pd.DataFrame(
             scaled_numerical,
@@ -76,9 +81,15 @@ def predict():
         
         processed_data = pd.concat([scaled_numerical_df, encoded_categorical_df], axis=1)
         gbm_pred = gbm_model.predict(processed_data)[0]
-        prediction = np.expm1(gbm_pred)
+        prediction = np.expm1(gbm_pred)  
+
+        lower_bound = prediction * 0.8
+        upper_bound = prediction * 1.2
         
-        return jsonify({'prediction': round(prediction, 2)})
+        return jsonify({
+            'lower_bound': round(lower_bound, 2),
+            'upper_bound': round(upper_bound, 2)
+        })
     
     except Exception as e:
         return jsonify({'error': str(e)}), 400
