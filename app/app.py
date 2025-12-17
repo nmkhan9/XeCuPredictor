@@ -83,8 +83,8 @@ def predict():
         gbm_pred = gbm_model.predict(processed_data)[0]
         prediction = np.expm1(gbm_pred)  
 
-        lower_bound = prediction * 0.8
-        upper_bound = prediction * 1.2
+        lower_bound = prediction * 0.6
+        upper_bound = prediction * 1.4
         
         return jsonify({
             'lower_bound': round(lower_bound, 2),
