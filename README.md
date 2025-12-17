@@ -1,145 +1,151 @@
 # 📘 Used Car Price Prediction in Vietnam
 
 ## 🚗 Introduction
-This project builds a machine learning model to predict **used car prices in Vietnam** using real-world data collected from multiple online platforms.  
-The problem has significant practical value, helping buyers, sellers, and e-commerce platforms estimate fair and accurate market prices.
+
+This project develops a **machine learning model** to predict **used car prices in Vietnam** based on real-world data collected from multiple online car marketplaces.
+
+The solution provides practical value by helping:
+- Buyers estimate fair market prices before purchasing  
+- Sellers price their vehicles competitively  
+- Online platforms improve pricing and recommendation systems  
 
 ---
 
 ## 📥 1. Data Collection (Web Scraping)
 
-Data was collected manually and automatically from three major car-selling websites in Vietnam:
+Data was collected both manually and automatically from three major car-selling websites in Vietnam:
 
-- **oto.com.vn**
-- **bonbanh.com**
-- **chotot.com**
+- **oto.com.vn** – 1,479 records  
+- **bonbanh.com** – 9,989 records  
+- **chotot.com** – 8,937 records  
 
-After scraping, the raw datasets were processed:
+After scraping, raw datasets were stored in **Google BigQuery** and processed as follows:
 
-- ✔ Standardized structure  
-- ✔ Removed special characters  
-- ✔ Normalized units (price, mileage, model year, fuel type, body type…)  
-- ✔ Unified brand names, car origins, and body categories  
+- Standardized data schema  
+- Removed special characters  
+- Normalized units (price, mileage, model year, fuel type, body type, etc.)  
+- Unified brand names, car origins, body types, and fuel categories  
 
-All raw data was uploaded and stored in **Google Cloud Storage**.
+All raw data was also archived in **Google Cloud Storage**.
 
 ---
 
 ## 🧹 2. Data Cleaning
 
-Each dataset was cleaned individually, including:
+Each dataset was cleaned independently, including:
 
-- Removing duplicated records  
+- Removing duplicate records  
 - Standardizing key fields: `km`, `price`, `brand`, `fuel`, `body`, `origin`  
-- Handling missing values  
-- Converting strings to numeric  
-- Removing outliers  
-- Merging the three datasets into a single cleaned DataFrame: **`df_unique`**
+- Converting string values to numeric format  
+
+The three datasets were then merged into a single DataFrame: **`df_unique`**.
+
+Additional cleaning steps on `df_unique`:
+- Unified brand names, origins, body types, and fuel categories  
+- Handled missing values  
+- Removed outliers  
+- Removed remaining duplicates  
+
+The final cleaned dataset was written back to **Google BigQuery** for analysis and modeling.
 
 ---
 
 ## 📊 3. Exploratory Data Analysis (EDA)
 
-After combining the datasets, several analyses were performed:
+After merging the datasets, **SQL queries and Python analysis** were used to perform:
 
-- Statistical summary  
-- Distribution of mileage, car age, and price  
-- Correlation between variables  
-- Outlier detection and removal  
-- Price analysis by brand, fuel type, origin, and body type  
+- Descriptive statistical analysis  
+- Distribution analysis of mileage, car age, and price  
+- Distribution analysis by brand, fuel type, and body type  
+- Correlation analysis between variables  
+- Price analysis by brand, fuel type, origin, body type, and car age  
 
-The cleaned dataset was then prepared for model training.
+Key insights were extracted to provide **practical recommendations for buyers and sellers**.
 
 ---
 
 ## ⚙️ 4. Feature Engineering
 
-Additional features were created to improve model performance:
+To improve model performance, several additional features were created based on domain knowledge and exploratory analysis:
 
-### ➤ Mileage grouping  
-### ➤ Age grouping  
-### ➤ Simple binary flags  
-- High mileage flag  
-- Old car flag  
+- **Age grouping**: Cars were grouped into four age categories (New, Young, Mid, Old) to capture nonlinear depreciation effects.  
+- **Mileage per year**: Average annual mileage was calculated to better represent vehicle usage intensity.  
+- **Log transformation**: Log transformation was applied to car age to reduce skewness and stabilize variance.  
+- **Brand and body grouping**: Rare car brands and body types were grouped into an "Other" category to reduce sparsity after encoding.  
+- **Origin-based features**: A binary flag indicating whether a car is imported was created, along with an interaction feature combining origin and age group.
 
-**No feature related to `price` was used to avoid data leakage.**
+All features were processed using **One-Hot Encoding** for categorical variables and **Standard Scaling** for numerical variables before model training.
+
+⚠️ **No features related to `price` were used to prevent data leakage.**
 
 ---
 
 ## 🤖 5. Model Training
 
-Five machine learning models were trained and compared.
+Four machine learning models were trained and evaluated:
 
-### **Linear Models**
+| Model | R² Train | R² Test | RMSE Train | RMSE Test |
+|------|---------|---------|------------|-----------|
+| Linear Regression | 0.7748 | 0.7604 | 0.3971 | 0.4076 |
+| Ridge Regression | 0.7747 | 0.7605 | 0.3972 | 0.4075 |
+| Random Forest | 0.9800 | 0.8353 | 0.1183 | 0.3380 |
+| Gradient Boosting | 0.8176 | 0.7978 | 0.3574 | 0.3745 |
 
-| Model              | R2 Train   | R2 Test   | RMSE Train       | RMSE Test        |
-|-------------------|------------|-----------|------------------|------------------|
-| Linear Regression | 0.471449   | 0.463941  | 1.9969e+08       | 2.0886e+08       |
-| Ridge Regression  | 0.471030   | 0.464131  | 1.9977e+08       | 2.0882e+08       |
-| Lasso Regression  | 0.471449   | 0.463941  | 1.9969e+08       | 2.0886e+08       |
+### Hyperparameter Tuning (GridSearchCV)
 
-### **Tree-based Models**
+- **Random Forest**
+  - Best parameters: `max_depth=20`, `min_samples_split=2`, `n_estimators=300`
+  - R² Test: **0.8371**
+  - RMSE Test: **0.3361**
 
-| Model             | R2 Train  | R2 Test  | RMSE Train       | RMSE Test        |
-|-------------------|-----------|----------|------------------|------------------|
-| GradientBoosting  | ⭐ 0.8021 | ⭐ 0.6442 | 1.2218e+08       | 1.7016e+08       |
-| RandomForest      | 0.6728    | 0.5958   | 1.5709e+08       | 1.8134e+08       |
+- **Gradient Boosting**
+  - Best parameters: `learning_rate=0.1`, `max_depth=5`, `n_estimators=300`
+  - R² Test: **0.8342**
+  - RMSE Test: **0.3391**
 
 ---
 
-## 🏆 6. Best Model Selection
+## 🏆 6. Final Model Selection
 
-The **GradientBoostingRegressor** was chosen because:
+The **GradientBoostingRegressor** was selected as the final model due to:
 
-- ✔ Strong overall performance  
-- ✔ High model stability  
-- ✔ Excellent handling of nonlinear relationships  
-- ✔ Well-balanced bias–variance trade-off  
+- Strong and stable overall performance  
+- Effective handling of nonlinear relationships  
+- Lower risk of overfitting compared to Random Forest  
+- Better suitability for real-world deployment  
 
-The final model was:
-
+Final model details:
 - Trained on the full dataset  
 - Saved as **`gradient_boosting_model.joblib`**  
-- Used in the Flask web application
+- Used in the Flask web application  
 
 ---
 
 ## 🌐 7. Flask Web Deployment
 
-The Flask application allows users to input car details:
+A Flask web application was developed to allow users to input:
 
-- Brand  
+- Car brand  
 - Body type  
 - Fuel type  
 - Mileage  
 - Car age  
 - Origin  
-- ...
 
-The backend performs:
-
-1. Preprocessing using the saved pipeline  
-2. One-hot encoding and normalization  
-3. Model prediction  
-4. Returning the estimated car price to the UI
+Backend workflow:
+1. Data preprocessing using the saved pipeline  
+2. One-hot encoding and feature scaling  
+3. Price range prediction using the trained model  
+4. Returning the estimated price to the user interface  
 
 ---
 
 ## 🎯 8. Conclusion
 
-The project successfully:
-
-- ✔ Crawled real-world data from 3 major automotive websites  
-- ✔ Cleaned, standardized, and merged datasets  
-- ✔ Engineered meaningful additional features  
-- ✔ Trained and evaluated 5 machine learning models  
-- ✔ Selected Gradient Boosting as the final model  
-- ✔ Deployed a working Flask web app for used car price prediction  
-
-### Future Improvements
-
-- Dynamic price recommendation  
-- Market trend analysis by region  
-- Adding more car attributes (color, number of owners, maintenance history, etc.)  
-
----
+This project successfully:
+- Collected real-world data from three major car-selling platforms  
+- Cleaned, standardized, and merged multiple datasets  
+- Engineered meaningful features based on domain knowledge  
+- Trained and evaluated multiple machine learning models  
+- Selected Gradient Boosting as the final model  
+- Deployed a functional Flask web application for used car price prediction  
