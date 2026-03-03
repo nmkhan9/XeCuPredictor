@@ -1,5 +1,6 @@
 from google.cloud import bigquery
 import re
+from sqlalchemy import inspect
 from configs import ENGINE
 
 
@@ -15,8 +16,21 @@ def upload_to_bigquery(df, table_id, if_exists="replace"):
     job.result() 
     print(f"✅ Uploaded {len(df)} rows to {table_id}")
 
-def upload_to_db(df, table_id, if_exists="replace"):
-    df.to_sql(table_id, ENGINE, if_exists=if_exists, index=False)
+def upload_to_db(df, table_id):
+    inspector = inspect(ENGINE)
+    
+    table_exists = inspector.has_table(table_id)
+    has_columns = False
+
+    if table_exists:
+        cols = inspector.get_columns(table_id)
+        has_columns = len(cols) > 0
+
+    if (not table_exists) or (not has_columns):
+        df.to_sql(table_id, ENGINE, if_exists="replace", index=False)
+    else:
+        df.to_sql(table_id, ENGINE, if_exists="append", index=False)
+
     print(f"✅ Saved {len(df)} rows to PostgreSQL table '{table_id}'")
 
 def read_links_from_file(path_file):

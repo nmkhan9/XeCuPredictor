@@ -6,17 +6,18 @@ from src.utils.io_utils import read_links_from_file, upload_to_bigquery, clean_c
 import pandas as pd
 
 BATCH_SIZE = 200      
-MIN_DELAY, MAX_DELAY = 5,7
+MIN_DELAY, MAX_DELAY = 3,5
 
 async def crawl_details(path_file, parse_car_detail, table_id, table_name):
     link_set = read_links_from_file(path_file)
     print(f"✅ Found {len(link_set)} links in {path_file}\n")
     remaining_links = list(link_set)
 
-    semaphore = asyncio.Semaphore(random.randint(3, 5))
+    semaphore = asyncio.Semaphore(random.randint(5, 7))
     all_cars = []
 
     async with aiohttp.ClientSession() as session:
+        await asyncio.sleep(random.uniform(1, 3))
         for batch_start in range(0, len(remaining_links), BATCH_SIZE):
             batch = remaining_links[batch_start:batch_start + BATCH_SIZE]
             print(f"📦 Batch {batch_start//BATCH_SIZE + 1}: {len(batch)} links")
@@ -37,7 +38,7 @@ async def crawl_details(path_file, parse_car_detail, table_id, table_name):
                 df_batch = pd.DataFrame(batch_cars)
                 df_batch = clean_column_names(df_batch)
                 upload_to_bigquery(df_batch, table_id, if_exists="append")
-                upload_to_db(df_batch, table_name, if_exists="append")
+                upload_to_db(df_batch, table_name)
                 
 
     print(f"\n📦 Total product details collected: {len(all_cars)}/{len(link_set)}")
