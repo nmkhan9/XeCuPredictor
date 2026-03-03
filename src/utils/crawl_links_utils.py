@@ -6,6 +6,7 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 from configs import HEADERS,PROXY
 
+PAGE = 500
 semaphore = asyncio.Semaphore(random.randint(5, 10))
 
 async def crawl_links(session, func_get_links, i, url_template=""):
@@ -13,7 +14,6 @@ async def crawl_links(session, func_get_links, i, url_template=""):
     async with semaphore:
         start_time = time.perf_counter()
         try:
-            await asyncio.sleep(random.uniform(0.5, 1.5))
             async with session.get(url, headers=HEADERS, proxy= PROXY, timeout=15) as resp:
                 crawl_time = datetime.now().strftime("%H:%M:%S")
                 if resp.status != 200:
@@ -38,7 +38,7 @@ async def crawl_links(session, func_get_links, i, url_template=""):
             print(f"⚠️ Error at page {i}: {e} | {elapsed:.2f}s | {crawl_time}")
             return []
         
-async def crawl_more_links(url_template, PAGE, getlink, path_store):
+async def crawl_more_links(url_template, getlink, path_store):
     link_set = set()
 
     async with aiohttp.ClientSession() as session:

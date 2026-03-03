@@ -7,7 +7,8 @@ from src.utils.crawl_details_utils import crawl_details
 
 BASE_DIR = Path(__file__).resolve().parents[3]
 path_file = BASE_DIR / "data" / "links_chotot.txt"
-table_id = f"{GCS_PROJECT_ID}.{GCS_BUCKET_NAME}.chotot_com"
+table_name = "chotot_com"
+table_id = f"{GCS_PROJECT_ID}.{GCS_BUCKET_NAME}.{table_name}"
 
 def parse_car_detail(html):
     soup = BeautifulSoup(html, "html.parser")
@@ -39,4 +40,4 @@ def parse_car_detail(html):
     return specs
 
 if __name__ == "__main__":
-    asyncio.run(crawl_details(path_file, parse_car_detail, table_id))
+    asyncio.run(crawl_details(path_file, parse_car_detail, table_id, table_name))

@@ -3,7 +3,6 @@ import os
 from src.utils.crawl_links_utils import crawl_more_links
 from pathlib import Path
 
-PAGE = 500
 url_template = "https://oto.com.vn/mua-ban-xe/p{}"
 
 BASE_DIR = Path(__file__).resolve().parents[3]
@@ -22,4 +21,4 @@ def getlink(soup):
 
 
 if __name__ == "__main__":
-    asyncio.run(crawl_more_links(url_template, PAGE, getlink, path_store))
+    asyncio.run(crawl_more_links(url_template, getlink, path_store))
