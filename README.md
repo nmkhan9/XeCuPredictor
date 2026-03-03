@@ -46,6 +46,8 @@ Additional cleaning steps on `df_unique`:
 - Removed outliers  
 - Removed remaining duplicates  
 
+After data cleaning and deduplication, the final dataset df_unique contains 11,305 records, representing a wide range of used car segments in the Vietnamese market.
+
 The final cleaned dataset was written back to **Google BigQuery** for analysis and modeling.
 
 ---
