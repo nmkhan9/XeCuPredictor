@@ -1,20 +1,8 @@
-import asyncio
-import random
-import time
-from datetime import datetime
+import asyncio, aiohttp, time, random
 from configs import HEADERS, PROXY
+from src.utils.io_utils import log, preview_data
 
 MAX_RETRIES = 3
-
-def log(status, idx, total, msg):
-    now = datetime.now().strftime("%H:%M:%S")
-    print(f"[{now}] [{idx}/{total}] {status} {msg}")
-
-def preview_data(data, max_len=120):
-    """In gọn dữ liệu"""
-    text = str(data)
-    return text[:max_len] + "..." if len(text) > max_len else text
-
 
 async def fetch_detail(session, func_parse_html, link, idx, total, semaphore):
     async with semaphore:
@@ -22,14 +10,14 @@ async def fetch_detail(session, func_parse_html, link, idx, total, semaphore):
             start_time = time.perf_counter()
 
             try:
-                await asyncio.sleep(random.uniform(0.3, 1.2))
-                log("🌐", idx, total, f"Fetching (attempt {attempt})")
+                await asyncio.sleep(random.uniform(0.3, 1))
+                log("🌐", idx, total, f"Fetching (try {attempt})")
 
                 async with session.get(
                     link,
                     headers=HEADERS,
                     proxy=PROXY,
-                    timeout=20
+                    timeout=aiohttp.ClientTimeout(total=20)
                 ) as resp:
 
                     if resp.status != 200:
@@ -41,25 +29,25 @@ async def fetch_detail(session, func_parse_html, link, idx, total, semaphore):
 
                     duration = time.perf_counter() - start_time
 
-                    # in dữ liệu vừa crawl (rút gọn)
-                    log("📄", idx, total, f"Data: {preview_data(car_info)}")
+                    # chỉ log 1 phần data
+                    if random.random() < 0.2:  # chỉ 20% request log data
+                        log("📄", idx, total, preview_data(car_info))
 
-                    log("✅", idx, total, f"Done in {duration:.2f}s")
+                    log("✅", idx, total, f"{duration:.2f}s")
 
                     return car_info
 
             except asyncio.TimeoutError:
-                duration = time.perf_counter() - start_time
-                log("⏱️", idx, total, f"Timeout {duration:.2f}s (attempt {attempt})")
+                log("⏱️", idx, total, f"Timeout (try {attempt})")
 
             except Exception as e:
-                duration = time.perf_counter() - start_time
-                log("⚠️", idx, total, f"{type(e).__name__}: {e}")
+                log("⚠️", idx, total, f"{type(e).__name__}")
 
+            # exponential backoff chuẩn hơn
             if attempt < MAX_RETRIES:
-                sleep_time = random.uniform(1, 2) * attempt
+                sleep_time = min(2 ** attempt + random.uniform(0, 1), 5)
                 log("🔁", idx, total, f"Retry in {sleep_time:.1f}s")
                 await asyncio.sleep(sleep_time)
             else:
-                log("⛔", idx, total, f"Failed after {MAX_RETRIES} attempts")
+                log("⛔", idx, total, "Failed")
                 return None

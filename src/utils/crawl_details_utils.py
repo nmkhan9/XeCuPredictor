@@ -20,70 +20,60 @@ async def crawl_details(path_file, parse_car_detail, table_id, table_name):
     link_set = read_links_from_file(path_file)
     total_links = len(link_set)
 
-    print(f"✅ Found {total_links} links in {path_file}\n")
+    print(f"✅ Found {total_links} links\n")
 
-    remaining_links = list(link_set)
     semaphore = asyncio.Semaphore(random.randint(2, 4))
 
-    all_cars = []
-
-    connector = aiohttp.TCPConnector(limit=50, ssl=False)
+    connector = aiohttp.TCPConnector(
+        limit=30,
+        limit_per_host=10,
+        ssl=False
+    )
 
     async with aiohttp.ClientSession(
         timeout=TIMEOUT,
         connector=connector
     ) as session:
 
-        # delay đầu (tránh burst request ngay lập tức)
         await asyncio.sleep(random.uniform(1, 3))
 
         for batch_idx, batch_start in enumerate(range(0, total_links, BATCH_SIZE), start=1):
-            batch = remaining_links[batch_start: batch_start + BATCH_SIZE]
+            batch = link_set[batch_start: batch_start + BATCH_SIZE]
 
             print(f"📦 Batch {batch_idx}: {len(batch)} links")
 
             tasks = [
-                fetch_detail(
-                    session,
-                    parse_car_detail,
-                    link,
-                    idx,
-                    total_links,
-                    semaphore
-                )
+                fetch_detail(session, parse_car_detail, link, idx, total_links, semaphore)
                 for idx, link in enumerate(batch, batch_start + 1)
             ]
 
-            # return_exceptions=True để không crash cả batch
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
-            batch_cars = []
-            for r in results:
-                if isinstance(r, Exception):
-                    print(f"⚠️ Task error: {r}")
-                elif r:
-                    batch_cars.append(r)
+            batch_cars = [
+                r for r in results
+                if r and not isinstance(r, Exception)
+            ]
 
-            all_cars.extend(batch_cars)
-
-            # save từng batch (tránh mất dữ liệu nếu crash giữa chừng)
+            # 🔥 save ngay → không giữ RAM
             if batch_cars:
                 try:
-                    df_batch = pd.DataFrame(batch_cars)
-                    df_batch = clean_column_names(df_batch)
+                    df = pd.DataFrame(batch_cars)
+                    df = clean_column_names(df)
 
-                    upload_to_bigquery(df_batch, table_id, if_exists="append")
-                    upload_to_db(df_batch, table_name)
+                    upload_to_bigquery(df, table_id, if_exists="append")
+                    upload_to_db(df, table_name)
 
-                    print(f"💾 Saved {len(df_batch)} records")
+                    print(f"💾 Saved {len(df)} records")
+
                 except Exception as e:
                     print(f"❌ Save error: {e}")
 
-            # cooldown giữa các batch
+            print(f"📊 Success: {len(batch_cars)}/{len(batch)}")
+
+            # cooldown
             sleep_time = random.uniform(MIN_DELAY, MAX_DELAY)
-            print(f"🕒 Cooling down {sleep_time:.1f}s...\n")
+            print(f"🕒 Sleep {sleep_time:.1f}s\n")
             await asyncio.sleep(sleep_time)
 
-    print(f"\n📦 Total collected: {len(all_cars)}/{total_links}")
-
+    print("\n🎉 DONE")
     return True

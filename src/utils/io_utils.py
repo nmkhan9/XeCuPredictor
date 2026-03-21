@@ -2,6 +2,7 @@ from google.cloud import bigquery
 import re
 from sqlalchemy import inspect
 from configs import ENGINE
+from datetime import datetime
 
 
 def upload_to_bigquery(df, table_id, if_exists="replace"):
@@ -47,3 +48,12 @@ def clean_column_names(df):
         for col in df.columns
     ]
     return df
+
+def log(status, idx, total, msg):
+    now = datetime.now().strftime("%H:%M:%S")
+    print(f"[{now}] [{idx}/{total}] {status} {msg}")
+
+def preview_data(data, max_len=120):
+    """In gọn dữ liệu"""
+    text = str(data)
+    return text[:max_len] + "..." if len(text) > max_len else text
