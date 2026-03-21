@@ -21,4 +21,4 @@ def getlink(soup):
 
 
 if __name__ == "__main__":
-    asyncio.run(crawl_more_links(url_template, getlink, path_store))
+    asyncio.run(crawl_more_links(url_template, getlink, path_store, PAGE=800))

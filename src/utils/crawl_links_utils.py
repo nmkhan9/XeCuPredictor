@@ -3,7 +3,6 @@ from bs4 import BeautifulSoup
 from configs import HEADERS, PROXY
 from src.utils.io_utils import log, preview_data
 
-PAGE = 500
 CONCURRENT = random.randint(5, 8)
 BATCH_SIZE = 20
 MAX_RETRIES = 3
@@ -67,7 +66,7 @@ async def crawl_links(session, func_get_links, i, total, url_template=""):
     return []
 
 
-async def crawl_more_links(url_template, getlink, path_store):
+async def crawl_more_links(url_template, getlink, path_store ,PAGE):
     # load link cũ
     existing_links = load_existing_links(path_store)
 
