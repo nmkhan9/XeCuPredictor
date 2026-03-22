@@ -18,7 +18,7 @@ def parse_car_detail(html):
 
     spec_section = soup.find("div", class_="box_car_detail")
     if spec_section:
-        rows = spec_section.find_all("div", class_="row")
+        rows = spec_section.find_all("div", class_=["row","row_last"])
         for row in rows:
             label_div = row.find("div", class_="label")
             value_div = row.find("div", class_="txt_input")

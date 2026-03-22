@@ -1,38 +1,6 @@
 import re
 import pandas as pd
 
-def clean_name(text):
-    if not isinstance(text, str):
-        return None
-    
-    text = re.sub(r"^\s*Xe\s+", "", text, flags=re.IGNORECASE)
-    
-    text = re.sub(r"[^a-zA-Z0-9À-ỹ\s]", " ", text)
-    
-    text = re.sub(r"\s+", " ", text)
-    
-    return text.strip()
-
-
-def cv_price(price_str):
-    if not isinstance(price_str, str):
-        return None
-
-    price_str = price_str.strip().lower()
-    total = 0
-
-    ty_match = re.search(r'(\d+(\.\d+)?)\s*t[ỷi]', price_str)
-    if ty_match:
-        ty = float(ty_match.group(1))
-        total += int(ty * 1_000_000_000)
-
-    trieu_match = re.search(r'(\d+(\.\d+)?)\s*triệu', price_str)
-    if trieu_match:
-        trieu = float(trieu_match.group(1))
-        total += int(trieu * 1_000_000)
-
-    return total if total > 0 else None
-
 def remove_outliers_iqr(df, column):
     Q1 = df[column].quantile(0.25)
     Q3 = df[column].quantile(0.75)
@@ -43,22 +11,6 @@ def remove_outliers_iqr(df, column):
 
     df_filtered = df[(df[column] >= lower_bound) & (df[column] <= upper_bound)].copy()
     return df_filtered
-
-def clean_km(df, col_name):
-    def convert_km(x):
-        if pd.isna(x):
-            return None
-        x = str(x).replace("Km", "").replace("km", "").replace(" ", "").replace(",", "").replace(".", "")
-        if x.lower() in ["none", "nan", ""]:
-            return None
-        try:
-            return float(x)
-        except:
-            return None
-
-    df[col_name] = df[col_name].apply(convert_km)
-    return df
-
 
 
 def clean_fuel(x):
