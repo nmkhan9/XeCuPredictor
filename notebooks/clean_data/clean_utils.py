@@ -14,15 +14,22 @@ def remove_outliers_iqr(df, column):
 
 
 def clean_fuel(x):
-    if pd.isna(x) or x == "-":
+    if pd.isna(x):
         return "Khác"
-    if "Xăng" in x:
+    
+    x = str(x).lower().strip()
+
+    if x in ["", "-"]:
+        return "Khác"
+
+    if "xăng" in x:
         return "Xăng"
-    if "Dầu" in x:
+    if "dầu" in x:
         return "Dầu"
-    if "Điện" in x:
+    if "điện" in x:
         return "Điện"
-    if "Hybrid" in x:
+    if "hybrid" in x:
         return "Hybrid"
-    return None
+
+    return "Khác"
 
