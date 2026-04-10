@@ -1,21 +1,55 @@
 from flask import Flask, request, render_template, jsonify
 import pandas as pd
 import numpy as np
-import os
-import json
+import os, json
 from joblib import load
 
 app = Flask(__name__)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# ===== LOAD MODEL =====
-svr_model = load(os.path.join(BASE_DIR, "model", "svr_best.joblib"))
-dt_model = load(os.path.join(BASE_DIR, "model", "dt_best.joblib"))
-lr_model = load(os.path.join(BASE_DIR, "model", "lr_best.joblib"))
-rr_model = load(os.path.join(BASE_DIR, "model", "rr_best.joblib"))
+AGE_MIN, AGE_MAX = 0, 30
+KM_MIN, KM_MAX = 50, 500_000
 
-# ===== LOAD PREPROCESS =====
+# Utils
+
+def parse_number(val):
+    if val is None or val.strip() == "":
+        raise ValueError("Thiếu dữ liệu")
+
+    val = val.replace(".", "").replace(",", "")
+    return float(val)
+
+
+def validate_input(form):
+    errors = {}
+
+    try:
+        age = parse_number(form.get('age'))
+        if not (AGE_MIN <= age <= AGE_MAX):
+            errors["age"] = f"Tuổi xe không hợp lệ !"
+    except:
+        errors["age"] = "Tuổi xe không hợp lệ !"
+
+    try:
+        km = parse_number(form.get('km'))
+        if not (KM_MIN <= km <= KM_MAX):
+            errors["km"] = f"Số km không hợp lệ !"
+    except:
+        errors["km"] = "Số km không hợp lệ !"
+
+    if errors:
+        return None, None, errors
+
+    return age, km, None
+
+# model
+models = {
+    "dt": load(os.path.join(BASE_DIR, "model", "dt_best.joblib")),
+    "lr": load(os.path.join(BASE_DIR, "model", "lr_best.joblib")),
+    "rr": load(os.path.join(BASE_DIR, "model", "rr_best.joblib"))
+}
+
 ohe = load(os.path.join(BASE_DIR, "model", "onehot_encoder.pkl"))
 scaler = load(os.path.join(BASE_DIR, "model", "scaler.pkl"))
 
@@ -25,119 +59,109 @@ with open(os.path.join(BASE_DIR, "model", "unique_values.json"), 'r', encoding='
 categorical_cols = list(ohe.feature_names_in_)
 numerical_cols = list(scaler.feature_names_in_)
 
-# ===== FEATURE ENGINEERING =====
+# Feature Engineering
+
 def feature_engineering(df):
-    df = df.copy()
-
-    df["age_group"] = pd.cut(
-        df["age"],
-        bins=[-1, 5, 10, 15, 100],
-        labels=["New", "Young", "Mid", "Old"]
-    )
-
+    df["age_group"] = pd.cut(df["age"], bins=[-1,5,10,15,100],
+                            labels=["New","Young","Mid","Old"])
     df["km_per_year"] = df["km"] / (df["age"] + 1)
     df["log_age"] = np.log1p(df["age"])
-
-    # ⚠️ FIX: không dùng value_counts() (vì input chỉ có 1 dòng)
-    df["body_group"] = df["body"]
-    df["brand_group"] = df["brand"]
-
     df["is_imported"] = (df["origin"] == "Nhập Khẩu").astype(object)
-    df["imported_age"] = df["is_imported"].astype(str) + "_" + df["age_group"].astype(str)
-
     return df
 
-# ===== HOME =====
+
+# Preprocess
+def preprocess(data):
+    df = pd.DataFrame([data])
+    df = feature_engineering(df)
+
+    # fill thiếu cột
+    for col in numerical_cols:
+        if col not in df:
+            df[col] = 0
+
+    for col in categorical_cols:
+        if col not in df:
+            df[col] = "Unknown"
+
+    df_num = df[numerical_cols].astype(float)
+    df_cat = df[categorical_cols].astype(str)
+
+    X_num = scaler.transform(df_num)
+    X_cat = ohe.transform(df_cat)
+
+    X = pd.concat([
+        pd.DataFrame(X_num, columns=numerical_cols),
+        pd.DataFrame(X_cat, columns=ohe.get_feature_names_out(categorical_cols))
+    ], axis=1)
+
+    return X
+
+
+# Predict
+
+def predict_models(X, selected_models):
+    error_map = {
+        "lr": 0.31,
+        "rr": 0.31,
+        "dt": 0.25
+    }
+
+    results = {}
+
+    for m in selected_models:
+        pred_log = models[m].predict(X)[0]
+        pred = np.exp(pred_log)
+
+        err = error_map[m]
+
+        results[m] = {
+            "prediction": round(pred, 2),
+            "lower": round(pred * (1 - err), 2),
+            "upper": round(pred * (1 + err), 2)
+        }
+
+    return results
+
+
+# Routes
 @app.route('/')
 def home():
     return render_template('index.html', unique_values=unique_values)
 
-# ===== PREDICT =====
+
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
-        age = float(request.form['age'])
-        km = float(request.form['km'])
-
         selected_models = request.form.getlist("models")
-
         if not selected_models:
-            return jsonify({'error': 'Vui lòng chọn ít nhất 1 mô hình'}), 400
+            return jsonify({'error': 'Chọn ít nhất 1 model'}), 400
 
-        # ===== INPUT =====
+        # validate
+        age, km, errors = validate_input(request.form)
+        if errors:
+            return jsonify({'error': errors}), 400
+
+        # build data
         data = {
             'origin': request.form['origin'],
             'body': request.form['body'],
+            'gearbox': request.form['gearbox'],
             'fuel': request.form['fuel'],
             'brand': request.form['brand'],
-            'gearbox': request.form['gearbox'],
             'age': age,
             'km': km
         }
 
-        input_df = pd.DataFrame([data])
-
-        # ===== FEATURE ENGINEERING =====
-        input_df = feature_engineering(input_df)
-
-        # ===== FIX LỖI THIẾU CỘT =====
-        for col in numerical_cols:
-            if col not in input_df.columns:
-                input_df[col] = 0
-
-        for col in categorical_cols:
-            if col not in input_df.columns:
-                input_df[col] = "Unknown"
-
-        # reorder đúng thứ tự
-        input_df = input_df[numerical_cols + categorical_cols]
-
-        # ===== ENCODE =====
-        encoded_categorical = ohe.transform(input_df[categorical_cols])
-        encoded_categorical_df = pd.DataFrame(
-            encoded_categorical,
-            columns=ohe.get_feature_names_out(categorical_cols),
-            index=input_df.index
-        )
-
-        # ===== SCALE =====
-        scaled_numerical = scaler.transform(input_df[numerical_cols])
-        scaled_numerical_df = pd.DataFrame(
-            scaled_numerical,
-            columns=numerical_cols,
-            index=input_df.index
-        )
-
-        processed_data = pd.concat([scaled_numerical_df, encoded_categorical_df], axis=1)
-
-        # ===== MODEL MAP =====
-        model_map = {
-            "svr": svr_model,
-            "dt": dt_model,
-            "lr": lr_model,
-            "rr": rr_model
-        }
-
-        results = {}
-
-        # ===== PREDICT MULTI MODEL =====
-        for m in selected_models:
-            pred = model_map[m].predict(processed_data)[0]
-
-            # nếu bạn train log(price)
-            pred = np.expm1(pred)
-
-            results[m] = {
-                "lower": round(pred * 0.6, 2),
-                "upper": round(pred * 1.4, 2)
-            }
+        X = preprocess(data)
+        results = predict_models(X, selected_models)
 
         return jsonify(results)
 
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
-# ===== RUN =====
+# Run
+
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(debug=True)
