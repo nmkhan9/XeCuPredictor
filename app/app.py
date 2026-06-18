@@ -59,14 +59,21 @@ with open(os.path.join(BASE_DIR, "model", "unique_values.json"), 'r', encoding='
 categorical_cols = list(ohe.feature_names_in_)
 numerical_cols = list(scaler.feature_names_in_)
 
-# Feature Engineering
+# Feature Engineering 
 
 def feature_engineering(df):
-    df["age_group"] = pd.cut(df["age"], bins=[-1,5,10,15,100],
-                            labels=["New","Young","Mid","Old"])
+    df["age_group"] = pd.cut(df["age"],bins=[-1, 5, 10, 15, 100],labels=["New", "Young", "Mid", "Old"])
+
     df["km_per_year"] = df["km"] / (df["age"] + 1)
+
     df["log_age"] = np.log1p(df["age"])
-    df["is_imported"] = (df["origin"] == "Nhập Khẩu").astype(object)
+    df['log_km'] = np.log1p(df['km'])
+
+    top_body = df["body"].value_counts().nlargest(5).index
+    df["body_group"] = df["body"].where(df["body"].isin(top_body), "Other")
+
+    top_brand = df["brand"].value_counts().nlargest(10).index
+    df["brand_group"] = df["brand"].where(df["brand"].isin(top_brand), "Other")
     return df
 
 
@@ -101,24 +108,36 @@ def preprocess(data):
 # Predict
 
 def predict_models(X, selected_models):
+
+    # Sai số tương đối của từng mô hình
     error_map = {
         "lr": 0.31,
         "rr": 0.31,
-        "dt": 0.25
+        "dt": 0.29
     }
 
     results = {}
 
     for m in selected_models:
-        pred_log = models[m].predict(X)[0]
-        pred = np.exp(pred_log)
 
-        err = error_map[m]
+        # Dự đoán trong log-space
+        pred_log = models[m].predict(X)[0]
+
+        # Chuyển về giá thực tế
+        pred_price = np.exp(pred_log)
+
+        # Sai số %
+        err_percent = error_map[m]
+
+        # Khoảng giá thực tế
+        lower_price = pred_price * (1 - err_percent)
+        upper_price = pred_price * (1 + err_percent)
 
         results[m] = {
-            "prediction": round(pred, 2),
-            "lower": round(pred * (1 - err), 2),
-            "upper": round(pred * (1 + err), 2)
+            "prediction": round(pred_price, 2),
+            "error_percent": round(err_percent * 100, 2),
+            "lower": round(lower_price, 2),
+            "upper": round(upper_price, 2)
         }
 
     return results
